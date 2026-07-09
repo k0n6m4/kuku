@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>九九 反復練習</title>
+<style>
+  :root{
+    --bg:#141f2b;
+    --panel:#1c2a39;
+    --panel-2:#233447;
+    --ink:#f4efe6;
+    --ink-dim:#9fb0bf;
+    --accent:#8fc1cf;
+    --accent-deep:#3f7d91;
+    --line:#31465c;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo",sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  header{
+    width:100%;
+    max-width:860px;
+    padding:16px 20px 4px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+  }
+  h1{
+    font-size:1.05rem;
+    font-weight:600;
+    letter-spacing:.35em;
+    margin:0;
+    color:var(--ink-dim);
+  }
+  .view{width:100%;max-width:860px;padding:8px 16px 32px;}
+  .hidden{display:none!important;}
+
+  /* ---------- 設定ビュー ---------- */
+  .legend{
+    font-size:.85rem;
+    color:var(--ink-dim);
+    line-height:1.7;
+    margin:4px 2px 12px;
+  }
+  .legend b{color:var(--accent);font-weight:600;}
+  .grid-wrap{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px;
+    overflow-x:auto;
+  }
+  table{border-collapse:separate;border-spacing:4px;margin:0 auto;}
+  th,td{
+    width:34px;height:34px;
+    min-width:34px;
+    text-align:center;
+    font-size:.9rem;
+    border-radius:8px;
+    user-select:none;
+  }
+  th{
+    color:var(--ink-dim);
+    font-weight:600;
+    cursor:pointer;
+    background:var(--panel-2);
+    transition:background .15s;
+  }
+  th:hover{background:#2c415a;}
+  th.corner{font-size:.6rem;line-height:1.2;color:var(--ink-dim);}
+  td.cell{
+    background:var(--panel-2);
+    color:transparent;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:background .12s,color .12s;
+    font-size:.62rem;
+  }
+  td.cell.on{
+    background:var(--accent-deep);
+    color:var(--ink);
+  }
+  .axis-note{
+    display:flex;
+    gap:16px;
+    flex-wrap:wrap;
+    font-size:.78rem;
+    color:var(--ink-dim);
+    margin:10px 2px 0;
+  }
+  .axis-note span b{color:var(--accent);}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  button{
+    font-family:inherit;
+    font-size:.95rem;
+    padding:12px 20px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--ink);
+    cursor:pointer;
+    transition:background .15s,transform .05s;
+  }
+  button:hover{background:#2c415a;}
+  button:active{transform:scale(.97);}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  button.primary{
+    background:var(--accent-deep);
+    border-color:var(--accent-deep);
+    font-weight:700;
+    flex:1;
+    min-width:160px;
+    letter-spacing:.2em;
+  }
+  button.primary:hover{background:#4a91a8;}
+  .count-note{font-size:.8rem;color:var(--ink-dim);margin-top:8px;}
+
+  /* ---------- 練習ビュー ---------- */
+  #practiceView{display:flex;flex-direction:column;min-height:calc(100vh - 60px);}
+  .stage{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:44vh;
+  }
+  .num{
+    font-family:"Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;
+    font-size:clamp(4.5rem,26vw,11rem);
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:.04em;
+    line-height:1;
+    min-height:1.1em;
+    opacity:0;
+    transform:scale(.96);
+    transition:opacity .15s ease,transform .15s ease;
+  }
+  .num.show{opacity:1;transform:none;}
+  .num.ans{color:var(--accent);}
+  @media (prefers-reduced-motion:reduce){
+    .num{transition:none;transform:none;}
+  }
+  .beads{
+    display:flex;
+    gap:12px;
+    margin-top:30px;
+    height:10px;
+  }
+  .bead{
+    width:10px;height:10px;
+    border-radius:50%;
+    background:var(--line);
+    transition:background .2s;
+  }
+  .bead.lit{background:var(--accent);}
+  .paused-label{
+    margin-top:18px;
+    font-size:.8rem;
+    letter-spacing:.4em;
+    color:var(--ink-dim);
+    height:1em;
+  }
+
+  .controls{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .slider-row{display:flex;flex-direction:column;gap:6px;}
+  .slider-row label{
+    display:flex;
+    justify-content:space-between;
+    font-size:.82rem;
+    color:var(--ink-dim);
+  }
+  .slider-row label output{
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+    font-weight:600;
+  }
+  input[type=range]{
+    width:100%;
+    accent-color:var(--accent);
+    height:28px;
+    cursor:pointer;
+  }
+  .ctl-btns{display:flex;gap:10px;flex-wrap:wrap;}
+  .ctl-btns button{flex:1;font-weight:600;min-width:110px;}
+  #pauseBtn.paused{background:var(--accent-deep);border-color:var(--accent-deep);}
+</style>
+</head>
+<body>
+<header>
+  <h1>九九 反復練習</h1>
+</header>
+
+<!-- ======== 設定ビュー ======== -->
+<div class="view" id="setupView">
+  <p class="legend">
+    出題したい式にチェックを入れてください。<br>
+    <b>掛けられる数 ＝ 式の 1つめ の数字</b>、
+    <b>掛ける数 ＝ 式の 2つめ の数字</b>です。<br>
+    行・列の見出しをタップすると、その段をまとめて切り替えられます。<br>
+    左上のマスをタップすると、全マスの選択状態が反転します。
+  </p>
+  <div class="grid-wrap">
+    <table id="grid" aria-label="出題する九九の選択表"></table>
+  </div>
+  <div class="axis-note">
+    <span>例：行 <b>3</b> × 列 <b>4</b> のマス ＝「3 × 4」を出題</span>
+  </div>
+  <p class="count-note" id="countNote"></p>
+  <div class="btn-row">
+    <button id="allOnBtn">全選択</button>
+    <button id="allOffBtn">全解除</button>
+    <button class="primary" id="startBtn">練習をはじめる</button>
+  </div>
+</div>
+
+<!-- ======== 練習ビュー ======== -->
+<div class="view hidden" id="practiceView">
+  <div class="stage">
+    <div class="num" id="num"></div>
+    <div class="beads" aria-hidden="true">
+      <span class="bead" id="b0"></span>
+      <span class="bead" id="b1"></span>
+      <span class="bead" id="b2"></span>
+    </div>
+    <div class="paused-label" id="pausedLabel"></div>
+  </div>
+
+  <div class="controls">
+    <div class="slider-row">
+      <label for="stepSlider">
+        <span>① 数の表示間隔</span>
+        <output id="stepVal">0.30 秒</output>
+      </label>
+      <input type="range" id="stepSlider" min="0.1" max="1.0" step="0.05" value="0.3">
+    </div>
+    <div class="slider-row">
+      <label for="gapSlider">
+        <span>② 次の問題までの間隔</span>
+        <output id="gapVal">1.0 秒</output>
+      </label>
+      <input type="range" id="gapSlider" min="0.5" max="2.3" step="0.1" value="1.0">
+    </div>
+    <div class="ctl-btns">
+      <button id="pauseBtn">一時停止</button>
+      <button id="resetBtn">間隔をデフォルトに戻す</button>
+      <button id="backBtn">選択に戻る</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 選択表 ---------- */
+  var checked = [];               // checked[a][b] : a,b = 1..9
+  for (var i = 0; i <= 9; i++){ checked[i] = []; for (var j = 0; j <= 9; j++) checked[i][j] = true; }
+
+  var grid = document.getElementById("grid");
+  var countNote = document.getElementById("countNote");
+
+  function buildGrid(){
+    var html = "<tr><th class='corner' id='cornerTh' title='全マスの選択状態を反転'>掛ける数＼<br>掛けら<br>れる数</th>";
+    for (var b = 1; b <= 9; b++) html += "<th data-col='" + b + "'>" + b + "</th>";
+    html += "</tr>";
+    for (var a = 1; a <= 9; a++){
+      html += "<tr><th data-row='" + a + "'>" + a + "</th>";
+      for (var c = 1; c <= 9; c++){
+        html += "<td class='cell' data-a='" + a + "' data-b='" + c + "'>" + a + "×" + c + "</td>";
+      }
+      html += "</tr>";
+    }
+    grid.innerHTML = html;
+  }
+  buildGrid();
+
+  function render(){
+    var n = 0;
+    var cells = grid.querySelectorAll("td.cell");
+    for (var k = 0; k < cells.length; k++){
+      var a = +cells[k].dataset.a, b = +cells[k].dataset.b;
+      if (checked[a][b]){ cells[k].classList.add("on"); n++; }
+      else cells[k].classList.remove("on");
+    }
+    countNote.textContent = "選択中：" + n + " / 81 式";
+  }
+  render();
+
+  grid.addEventListener("click", function(e){
+    var t = e.target;
+    if (t.classList.contains("cell")){
+      var a = +t.dataset.a, b = +t.dataset.b;
+      checked[a][b] = !checked[a][b];
+    } else if (t.dataset.row){
+      var r = +t.dataset.row;
+      var allOn = true;
+      for (var b2 = 1; b2 <= 9; b2++) if (!checked[r][b2]) { allOn = false; break; }
+      for (b2 = 1; b2 <= 9; b2++) checked[r][b2] = !allOn;
+    } else if (t.dataset.col){
+      var c = +t.dataset.col;
+      var allOn2 = true;
+      for (var a2 = 1; a2 <= 9; a2++) if (!checked[a2][c]) { allOn2 = false; break; }
+      for (a2 = 1; a2 <= 9; a2++) checked[a2][c] = !allOn2;
+    } else if (t.id === "cornerTh" || (t.closest && t.closest("#cornerTh"))){
+      invertAll();
+    } else return;
+    render();
+  });
+
+  // 左上マス：各マスの選択状態を個別に反転
+  function invertAll(){
+    for (var a = 1; a <= 9; a++)
+      for (var b = 1; b <= 9; b++)
+        checked[a][b] = !checked[a][b];
+  }
+  document.getElementById("allOnBtn").addEventListener("click", function(){
+    for (var a = 1; a <= 9; a++) for (var b = 1; b <= 9; b++) checked[a][b] = true; render();
+  });
+  document.getElementById("allOffBtn").addEventListener("click", function(){
+    for (var a = 1; a <= 9; a++) for (var b = 1; b <= 9; b++) checked[a][b] = false; render();
+  });
+
+  function pool(){
+    var p = [];
+    for (var a = 1; a <= 9; a++) for (var b = 1; b <= 9; b++) if (checked[a][b]) p.push([a, b]);
+    return p;
+  }
+
+  /* ---------- 練習エンジン（フラッシュ表示） ---------- */
+  var setupView = document.getElementById("setupView");
+  var practiceView = document.getElementById("practiceView");
+  var numEl = document.getElementById("num");
+  var beads = [0,1,2].map(function(i){ return document.getElementById("b" + i); });
+  var pausedLabel = document.getElementById("pausedLabel");
+  var pauseBtn = document.getElementById("pauseBtn");
+
+  var stepSlider = document.getElementById("stepSlider");
+  var gapSlider  = document.getElementById("gapSlider");
+  var stepVal = document.getElementById("stepVal");
+  var gapVal  = document.getElementById("gapVal");
+
+  var DEF_STEP = 0.3, DEF_GAP = 1.0;
+
+  function fmtStep(v){ return v.toFixed(2) + " 秒"; }
+  function fmtGap(v){ return v.toFixed(1) + " 秒"; }
+  function syncOutputs(){
+    stepVal.textContent = fmtStep(+stepSlider.value);
+    gapVal.textContent  = fmtGap(+gapSlider.value);
+  }
+  stepSlider.addEventListener("input", syncOutputs);
+  gapSlider.addEventListener("input", syncOutputs);
+  syncOutputs();
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    stepSlider.value = DEF_STEP;
+    gapSlider.value  = DEF_GAP;
+    syncOutputs();
+  });
+
+  var timer = null;
+  var paused = false;
+  var phase = 0;          // 0:1つめの数 / 1:2つめの数 / 2:答え / 3:次の問題へ
+  var prevKey = "";
+  var cur = null;         // [a, b]
+  var vals = [];          // [a, b, a*b]
+
+  function newProblem(){
+    var p = pool();
+    if (p.length === 0) return null;
+    var pick;
+    if (p.length === 1){
+      pick = p[0];
+    } else {
+      do { pick = p[Math.floor(Math.random() * p.length)]; }
+      while ((pick[0] + "x" + pick[1]) === prevKey);
+    }
+    prevKey = pick[0] + "x" + pick[1];
+    return pick;
+  }
+
+  function clearBeads(){
+    for (var i = 0; i < 3; i++) beads[i].classList.remove("lit");
+  }
+
+  // 表示する瞬間にだけテキストを書き込む（先読み表示バグの根本対策）
+  function flash(text, isAns){
+    numEl.classList.remove("show");
+    void numEl.offsetWidth;            // トランジション再始動（同じ数字の連続でも切替が分かる）
+    numEl.textContent = text;
+    numEl.classList.toggle("ans", !!isAns);
+    numEl.classList.add("show");
+  }
+
+  function hideNum(){
+    numEl.classList.remove("show");
+  }
+
+  function step(){
+    timer = null;
+    if (phase <= 2){
+      flash(vals[phase], phase === 2);
+      beads[phase].classList.add("lit");
+      phase++;
+      schedule(phase <= 2 ? (+stepSlider.value) * 1000 : (+gapSlider.value) * 1000);
+    } else {
+      // 間隔②が経過：画面を空にしてから次の問題の1つめの数へ
+      hideNum();
+      clearBeads();
+      cur = newProblem();
+      if (!cur){ goSetup(); return; }
+      vals = [cur[0], cur[1], cur[0] * cur[1]];
+      phase = 0;
+      schedule(180);   // フェードアウトが見える最小限の空白
+    }
+  }
+
+  function schedule(ms){
+    if (paused) return;
+    timer = setTimeout(step, ms);
+  }
+
+  function startPractice(){
+    var p = pool();
+    if (p.length === 0){
+      countNote.textContent = "選択中：0 / 81 式 ― 最低1つはチェックしてください";
+      return;
+    }
+    setupView.classList.add("hidden");
+    practiceView.classList.remove("hidden");
+    paused = false;
+    pauseBtn.textContent = "一時停止";
+    pauseBtn.classList.remove("paused");
+    pausedLabel.textContent = "";
+    prevKey = "";
+    numEl.textContent = "";
+    hideNum();
+    clearBeads();
+    cur = newProblem();
+    vals = [cur[0], cur[1], cur[0] * cur[1]];
+    phase = 0;
+    schedule(400);
+  }
+
+  function pause(){
+    paused = true;
+    if (timer){ clearTimeout(timer); timer = null; }
+    pauseBtn.textContent = "再開";
+    pauseBtn.classList.add("paused");
+    pausedLabel.textContent = "一時停止中";
+  }
+
+  function resume(){
+    paused = false;
+    pauseBtn.textContent = "一時停止";
+    pauseBtn.classList.remove("paused");
+    pausedLabel.textContent = "";
+    var delay = (phase >= 1 && phase <= 2) ? (+stepSlider.value) * 1000
+              : (phase === 3) ? (+gapSlider.value) * 1000
+              : 300;
+    schedule(delay);
+  }
+
+  pauseBtn.addEventListener("click", function(){
+    if (paused) resume(); else pause();
+  });
+
+  function goSetup(){
+    pause();
+    practiceView.classList.add("hidden");
+    setupView.classList.remove("hidden");
+    render();
+  }
+  document.getElementById("backBtn").addEventListener("click", goSetup);
+  document.getElementById("startBtn").addEventListener("click", startPractice);
+
+  document.addEventListener("keydown", function(e){
+    if (e.code === "Space" && !practiceView.classList.contains("hidden")){
+      e.preventDefault();
+      if (paused) resume(); else pause();
+    }
+  });
+})();
+</script>
+</body>
+</html>
