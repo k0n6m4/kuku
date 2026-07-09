@@ -213,7 +213,7 @@
 <!-- ======== 設定ビュー ======== -->
 <div class="view" id="setupView">
   <p class="legend">
-    出題したい式にチェックを入れてください。<br>
+    出題しない式はボタンを押し、式が見えない状態にしたうえ、練習を開始してください。<br>
     <b>掛けられる数 ＝ 式の 1つめ の数字</b>、
     <b>掛ける数 ＝ 式の 2つめ の数字</b>です。<br>
     行・列の見出しをタップすると、その段をまとめて切り替えられます。<br>
@@ -229,6 +229,7 @@
   <div class="btn-row">
     <button id="allOnBtn">全選択</button>
     <button id="allOffBtn">全解除</button>
+    <button id="sameOnlyBtn">同じ数のみ選択（1×1・2×2…）</button>
     <button class="primary" id="startBtn">練習をはじめる</button>
   </div>
 </div>
@@ -339,6 +340,12 @@
   document.getElementById("allOffBtn").addEventListener("click", function(){
     for (var a = 1; a <= 9; a++) for (var b = 1; b <= 9; b++) checked[a][b] = false; render();
   });
+  document.getElementById("sameOnlyBtn").addEventListener("click", function(){
+    for (var a = 1; a <= 9; a++)
+      for (var b = 1; b <= 9; b++)
+        checked[a][b] = (a === b);
+    render();
+  });
 
   function pool(){
     var p = [];
@@ -404,8 +411,6 @@
 
   // 表示する瞬間にだけテキストを書き込む（先読み表示バグの根本対策）
   function flash(text, isAns){
-    numEl.classList.remove("show");
-    void numEl.offsetWidth;            // トランジション再始動（同じ数字の連続でも切替が分かる）
     numEl.textContent = text;
     numEl.classList.toggle("ans", !!isAns);
     numEl.classList.add("show");
@@ -415,13 +420,21 @@
     numEl.classList.remove("show");
   }
 
+  // 数字が同じ（例：3×3）でも必ず一度消してから次を表示するための待機フェーズ
+  var HIDE_GAP_MS = 120;
+
   function step(){
     timer = null;
     if (phase <= 2){
-      flash(vals[phase], phase === 2);
-      beads[phase].classList.add("lit");
-      phase++;
-      schedule(phase <= 2 ? (+stepSlider.value) * 1000 : (+gapSlider.value) * 1000);
+      hideNum();
+      timer = setTimeout(function(){
+        timer = null;
+        flash(vals[phase], phase === 2);
+        beads[phase].classList.add("lit");
+        phase++;
+        schedule(phase <= 2 ? Math.max(0, (+stepSlider.value) * 1000 - HIDE_GAP_MS)
+                             : Math.max(0, (+gapSlider.value) * 1000 - HIDE_GAP_MS));
+      }, HIDE_GAP_MS);
     } else {
       // 間隔②が経過：画面を空にしてから次の問題の1つめの数へ
       hideNum();
@@ -474,8 +487,8 @@
     pauseBtn.textContent = "一時停止";
     pauseBtn.classList.remove("paused");
     pausedLabel.textContent = "";
-    var delay = (phase >= 1 && phase <= 2) ? (+stepSlider.value) * 1000
-              : (phase === 3) ? (+gapSlider.value) * 1000
+    var delay = (phase >= 1 && phase <= 2) ? Math.max(0, (+stepSlider.value) * 1000 - HIDE_GAP_MS)
+              : (phase === 3) ? Math.max(0, (+gapSlider.value) * 1000 - HIDE_GAP_MS)
               : 300;
     schedule(delay);
   }
